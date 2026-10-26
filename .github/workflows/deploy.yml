@@ -1,0 +1,132 @@
+name: Deploy AWS infrastructure
+
+# Source -> Build -> Staging -> Production
+#
+#  - Pull request to main : only the BUILD job runs (check the code and synth).
+#  - Push to main         : BUILD, then STAGING, then PRODUCTION.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# "id-token: write" lets the job log in to AWS without stored access keys.
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  # Set a repository variable called AWS_REGION to change this.
+  AWS_REGION: ${{ vars.AWS_REGION || 'ca-central-1' }}
+
+jobs:
+  # ---------------------------------------------------------
+  # BUILD: install, type-check, and run "cdk synth" for both
+  # stages. This needs no AWS login and no AWS cost.
+  # ---------------------------------------------------------
+  build:
+    name: Build (cdk synth)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the source code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check the TypeScript
+        run: npm run build
+
+      - name: CDK synth (staging)
+        run: npx cdk synth --quiet -c stage=staging
+
+      - name: CDK synth (production)
+        run: npx cdk synth --quiet -c stage=production
+
+  # ---------------------------------------------------------
+  # STAGING: only on a push to main.
+  # ---------------------------------------------------------
+  deploy-staging:
+    name: Deploy to staging
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Log in to AWS
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Bootstrap only if this account/region has never been bootstrapped.
+      - name: CDK bootstrap (first-time setup only)
+        run: |
+          if aws cloudformation describe-stacks --stack-name CDKToolkit > /dev/null 2>&1; then
+            echo "Already bootstrapped - skipping."
+          else
+            npx cdk bootstrap
+          fi
+
+      - name: CDK deploy (staging)
+        run: npx cdk deploy --all -c stage=staging --require-approval never
+
+  # ---------------------------------------------------------
+  # PRODUCTION: runs only after staging succeeded. In GitHub, add
+  # "Required reviewers" to the "production" environment if you
+  # want a person to approve this step first.
+  # ---------------------------------------------------------
+  deploy-production:
+    name: Deploy to production
+    needs: deploy-staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Log in to AWS
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK bootstrap (first-time setup only)
+        run: |
+          if aws cloudformation describe-stacks --stack-name CDKToolkit > /dev/null 2>&1; then
+            echo "Already bootstrapped - skipping."
+          else
+            npx cdk bootstrap
+          fi
+
+      - name: CDK deploy (production)
+        run: npx cdk deploy --all -c stage=production --require-approval never

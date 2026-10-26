@@ -1,0 +1,28 @@
+{
+  "name": "aws-infra-cdk",
+  "version": "1.0.0",
+  "description": "VPC, ALB, Auto Scaling EC2 and RDS deployed with AWS CDK and GitHub Actions",
+  "bin": {
+    "aws-infra-cdk": "bin/aws-infra.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "synth": "cdk synth",
+    "deploy:staging": "cdk deploy --all -c stage=staging --require-approval never",
+    "deploy:production": "cdk deploy --all -c stage=production --require-approval never",
+    "destroy:staging": "cdk destroy --all -c stage=staging --force",
+    "destroy:production": "cdk destroy --all -c stage=production --force",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.1146.1",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.274.0",
+    "constructs": "^10.4.2",
+    "source-map-support": "^0.5.21"
+  }
+}
