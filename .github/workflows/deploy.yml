@@ -75,8 +75,8 @@ jobs:
       - name: Log in to AWS
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::771606957800:role/aws-cdk-project
+          aws-region: ca-central-1
 
       # Bootstrap only if this account/region has never been bootstrapped.
       - name: CDK bootstrap (first-time setup only)
