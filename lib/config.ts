@@ -30,10 +30,10 @@ export interface InfraConfig {
 const DEFAULTS: InfraConfig = {
   stage: "dev",
   vpcCidr: "10.20.0.0/16",
-  instanceType: "t2.micro",
-  desiredCapacity: 2,
+  instanceType: "t3.micro",
+  desiredCapacity: 1,
   minCapacity: 1,
-  maxCapacity: 4,
+  maxCapacity: 1,
   dbEngine: "postgres",
   dbStorage: 20,
   dbInstanceType: "db.t3.micro",
