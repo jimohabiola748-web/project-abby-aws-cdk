@@ -130,7 +130,7 @@ jobs:
   deploy-production:
     name: Deploy to production
     needs: deploy-staging
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     environment: production
     concurrency:
