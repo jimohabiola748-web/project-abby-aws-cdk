@@ -74,7 +74,12 @@ jobs:
           cache: npm
 
       - run: npm ci
-
+      - name: Check GitHub OIDC context
+        run: |
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Ref: $GITHUB_REF"
+          echo "Environment: staging"
+          echo "AWS role secret configured: ${{ secrets.AWS_ROLE_ARN != '' }}"
       - name: Log in to AWS
         uses: aws-actions/configure-aws-credentials@v6
         with:
